@@ -4,6 +4,8 @@ A comprehensive WordPress plugin that exports WordPress metrics in Prometheus fo
 
 Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpress.org/plugins/slymetrics/)
 
+**Latest Version:** 1.3.0 - WordPress.org Compliance Update
+
 ![Grafana Dashboard](./assets//screenshot-4.png)
 
 ## 🚀 Features
@@ -20,6 +22,17 @@ Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpr
 - **🛡️ Production Ready**: Enterprise-grade architecture with comprehensive error handling
 - **💾 Memory Optimized**: Lazy loading and optimized data structures for heavy operations
 - **🌐 Professional Code**: Multi-language support with enterprise-grade documentation
+
+### New in Version 1.3.0
+
+- **🔧 WordPress.org Compliance**: Complete compliance with WordPress.org Plugin Directory requirements
+- **📦 wp_enqueue Implementation**: Migrated from inline scripts/styles to proper wp_enqueue_script/style with wp_add_inline_*
+- **🎨 CSS Namespace Fix**: Added unique 'slymetrics-' prefix to all CSS classes to prevent conflicts
+- **🔒 Security Enhancements**: Added phpcs:ignore comments for legitimate nonce bypasses in public metrics endpoints
+- **🎯 Admin Hook Correction**: Fixed admin page hook from 'tools_page_slymetrics' to 'settings_page_slymetrics'
+- **🚫 Endpoint Optimization**: Removed generic '/metrics' route to reduce potential conflicts with other plugins
+- **📝 Code Quality**: Enhanced WordPress Coding Standards compliance with proper escaping and nonce handling
+- **✅ Copy Functionality**: Restored admin interface copy-to-clipboard functionality with proper CSS targeting
 
 ### New in Version 1.2.0
 
@@ -85,7 +98,7 @@ The plugin provides multiple endpoint options to ensure compatibility across dif
 ### Primary Endpoints (Require Permalink Support)
 ```
 /slymetrics/metrics
-/metrics
+/slymetrics
 ```
 **Note:** Requires WordPress permalink support (Settings → Permalinks → Select any option except "Plain").
 

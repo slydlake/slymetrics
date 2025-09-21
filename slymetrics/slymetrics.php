@@ -2,13 +2,39 @@
 /**
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
- * Text Domain: slymetrics
- * Description: Plugin to export metrics for prometheus
+ * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
+ * Version: 1.3.0
+ * Requires at least: 5.0
+ * Requires PHP: 7.4
  * Author: Timon Först
  * Author URI: https://github.com/slydlake
- * Version: 1.2.0
  * License: MIT
+ * License URI: https://opensource.org/licenses/MIT
+ * Text Domain: slymetrics
+ *
+ * @package SlyMetrics
+ * @author Timon Först
+ * @since 1.0.0
  */
+
+// Prevent direct access
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+// Define plugin constants for proper path determination
+if ( ! defined( 'SLYMET_PLUGIN_FILE' ) ) {
+    define( 'SLYMET_PLUGIN_FILE', __FILE__ );
+}
+if ( ! defined( 'SLYMET_PLUGIN_DIR' ) ) {
+    define( 'SLYMET_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+}
+if ( ! defined( 'SLYMET_PLUGIN_URL' ) ) {
+    define( 'SLYMET_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+}
+if ( ! defined( 'SLYMET_VERSION' ) ) {
+    define( 'SLYMET_VERSION', '1.2.0' );
+}
 
 if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
 
@@ -39,6 +65,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             // Admin interface
             add_action( 'admin_menu', array( __CLASS__, 'add_admin_menu' ) );
             add_action( 'admin_init', array( __CLASS__, 'admin_init' ) );
+            add_action( 'admin_enqueue_scripts', array( __CLASS__, 'admin_enqueue_scripts' ) );
             
             // Add settings link to plugin page
             add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), array( __CLASS__, 'add_plugin_action_links' ) );
@@ -172,8 +199,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             // Check for path-based patterns
             $metrics_paths = array(
                 'slymetrics/metrics',
-                'slymetrics',
-                'metrics'
+                'slymetrics'
             );
             
             if ( in_array( $path, $metrics_paths, true ) ) {
@@ -1034,8 +1060,10 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
          */
         public static function admin_init() {
             // Handle form submissions
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification is performed below with check_admin_referer()
             if ( isset( $_POST['slymetrics_action'] ) && check_admin_referer( 'slymetrics_settings' ) ) {
-                if ( $_POST['slymetrics_action'] === 'regenerate_tokens' ) {
+                $action = sanitize_text_field( wp_unslash( $_POST['slymetrics_action'] ) );
+                if ( 'regenerate_tokens' === $action ) {
                     // Regenerate API key (always allowed)
                     self::set_encrypted_option( 'slymetrics_api_key', self::generate_secure_token() );
                     
@@ -1051,6 +1079,133 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
         }
 
         /**
+         * Enqueue admin scripts and styles.
+         *
+         * @param string $hook_suffix The current admin page.
+         */
+        public static function admin_enqueue_scripts( $hook_suffix ) {
+            // Only load on our settings page
+            if ( 'settings_page_slymetrics' !== $hook_suffix ) {
+                return;
+            }
+
+            // Enqueue WordPress admin styles as dependency
+            wp_enqueue_style( 'wp-admin' );
+            
+            // Add inline CSS for admin page styling
+            $admin_css = '
+                .slymetrics-admin-wrap { max-width: none !important; margin-right: 20px; }
+                .slymetrics-card { 
+                    background: #fff !important; 
+                    border: 1px solid #ccd0d4 !important; 
+                    padding: 20px !important; 
+                    margin: 20px 0 !important; 
+                    width: calc(100% - 40px) !important;
+                    max-width: none !important;
+                    box-sizing: border-box !important;
+                }
+                .slymetrics-code-block {
+                    position: relative; background: #f6f7f7; border: 1px solid #ddd; border-radius: 4px; margin: 15px 0;
+                }
+                .slymetrics-code-block pre {
+                    background: #f6f7f7; padding: 15px; margin: 0; border: none; border-radius: 4px;
+                    font-family: Monaco, Consolas, "Lucida Console", monospace; white-space: pre-wrap; word-wrap: break-word;
+                    max-width: none; overflow-x: auto;
+                }
+                .slymetrics-copy-btn {
+                    position: absolute; top: 10px; right: 10px; background: #0073aa; color: white; border: none;
+                    padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; z-index: 10;
+                }
+                .slymetrics-copy-btn:hover { background: #005a87; }
+                .slymetrics-regenerate-form { margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 4px; }
+                .slymetrics-env-notice { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 4px; margin: 20px 0; }
+                .slymetrics-env-notice h4 { margin-top: 0; color: #856404; }
+                .slymetrics-auth-token-display {
+                    font-family: Monaco, Consolas, "Lucida Console", monospace; background: #f6f7f7;
+                    padding: 10px; border: 1px solid #ddd; border-radius: 4px; word-break: break-all;
+                }
+            ';
+            wp_add_inline_style( 'wp-admin', $admin_css );
+            
+            // Enqueue jQuery as dependency for our script
+            wp_enqueue_script( 'jquery' );
+            
+            // Add inline JavaScript for copy functionality
+            $admin_js = '
+                function copyToClipboard(elementId) {
+                    const element = document.getElementById(elementId);
+                    if (!element) return;
+                    
+                    let text = "";
+                    
+                    // Handle different element types
+                    if (element.tagName === "PRE") {
+                        text = element.textContent || element.innerText;
+                    } else if (element.tagName === "CODE") {
+                        text = element.textContent || element.innerText;
+                    } else if (element.tagName === "INPUT" || element.tagName === "TEXTAREA") {
+                        text = element.value;
+                    } else {
+                        text = element.textContent || element.innerText || element.value;
+                    }
+                    
+                    // Clean up the text
+                    text = text.trim();
+                    
+                    // Try modern clipboard API first
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(function() {
+                            showCopyFeedback(element);
+                        }).catch(function(err) {
+                            fallbackCopy(text, element);
+                        });
+                    } else {
+                        fallbackCopy(text, element);
+                    }
+                }
+                
+                function fallbackCopy(text, element) {
+                    const textarea = document.createElement("textarea");
+                    textarea.value = text;
+                    textarea.style.position = "fixed";
+                    textarea.style.opacity = "0";
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    
+                    try {
+                        document.execCommand("copy");
+                        showCopyFeedback(element);
+                    } catch (err) {
+                        console.error("Copy failed:", err);
+                    }
+                    
+                    document.body.removeChild(textarea);
+                }
+                
+                function showCopyFeedback(element) {
+                    const button = element.parentNode.querySelector(".slymetrics-copy-btn") || 
+                                  element.parentElement.querySelector(".slymetrics-copy-btn") ||
+                                  element.nextElementSibling;
+                    
+                    if (button) {
+                        const originalText = button.textContent;
+                        button.textContent = "Copied!";
+                        button.style.backgroundColor = "#00a32a";
+                        button.style.color = "white";
+                        
+                        setTimeout(function() {
+                            button.textContent = originalText;
+                            button.style.backgroundColor = "";
+                            button.style.color = "";
+                        }, 2000);
+                    }
+                }
+            ';
+            wp_add_inline_script( 'jquery', $admin_js );
+        }
+
+        /**
          * Render admin page.
          */
         public static function admin_page() {
@@ -1059,12 +1214,12 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             $is_env_key = self::is_encryption_key_from_env();
             
             ?>
-            <div class="wrap">
+            <div class="wrap slymetrics-admin-wrap">
                 <h1>SlyMetrics Settings</h1>
                 
                 <?php settings_errors( 'slymetrics_messages' ); ?>
                 
-                <div class="card">
+                <div class="slymetrics-card">
                     <h2>Endpoint Information</h2>
                     <p><strong>Primary Metrics Endpoint (Clean URL):</strong> <code><?php echo esc_url( home_url( '/slymetrics/metrics' ) ); ?></code></p>
                     <p><em>Recommended endpoint with clean URL structure. Works out-of-the-box with WordPress permalinks enabled.</em></p>
@@ -1075,7 +1230,6 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                         <li><strong>REST API Endpoint:</strong> <code><?php echo esc_url( $endpoint_url ); ?></code></li>
                         <li><strong>REST API Fallback:</strong> <code><?php echo esc_url( home_url( '/index.php?rest_route=/slymetrics/v1/metrics' ) ); ?></code> <em>(always works)</em></li>
                         <li><strong>Query Parameter:</strong> <code><?php echo esc_url( home_url( '/?slymetrics=1' ) ); ?></code> <em>(always works)</em></li>
-                        <li><strong>Short Path:</strong> <code><?php echo esc_url( home_url( '/metrics' ) ); ?></code> <em>(alternative clean URL)</em></li>
                     </ul>
                     
                     <p><em>All endpoints are protected by authentication and return the same metrics data in Prometheus format.</em></p>
@@ -1084,7 +1238,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                     <?php endif; ?>
                 </div>
 
-                <div class="card">
+                <div class="slymetrics-card">
                     <h2>Authentication Tokens</h2>
                     <table class="form-table">
                         <tr>
@@ -1092,7 +1246,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                             <td>
                                 <div class="token-field">
                                     <input type="text" class="regular-text" id="bearer-token" value="<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" readonly onclick="this.select();" />
-                                    <button type="button" class="button copy-btn" onclick="copyToClipboard('bearer-token')">Copy</button>
+                                    <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('bearer-token')">Copy</button>
                                 </div>
                                 <p class="description">For Authorization header: <code>Authorization: Bearer TOKEN</code></p>
                             </td>
@@ -1102,7 +1256,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                             <td>
                                 <div class="token-field">
                                     <input type="text" class="regular-text" id="api-key" value="<?php echo esc_attr( $auth_settings['api_key'] ); ?>" readonly onclick="this.select();" />
-                                    <button type="button" class="button copy-btn" onclick="copyToClipboard('api-key')">Copy</button>
+                                    <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('api-key')">Copy</button>
                                 </div>
                                 <p class="description">As URL parameter: <code>?api_key=KEY</code></p>
                             </td>
@@ -1128,7 +1282,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                     </form>
                 </div>
 
-                <div class="card">
+                <div class="slymetrics-card">
                     <h2>Authentication Methods</h2>
                     <ul>
                         <li><strong>WordPress Admin:</strong> Logged-in administrators have automatic access</li>
@@ -1152,13 +1306,13 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                     <p>For production environments, use environment variables for enhanced security:</p>
                     
                     <h4>Docker</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <code id="docker-example">docker run -e SLYMETRICS_ENCRYPTION_KEY="$(openssl rand -base64 32)" -e SLYMETRICS_BEARER_TOKEN="$(openssl rand -hex 32)" your-wordpress-image</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('docker-example')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('docker-example')">Copy</button>
                     </div>
                     
                     <h4>Kubernetes</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <pre id="k8s-example">env:
   - name: SLYMETRICS_ENCRYPTION_KEY
     valueFrom:
@@ -1170,7 +1324,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
       secretKeyRef:
         name: wordpress-secrets
         key: slymetrics-bearer-token</pre>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('k8s-example')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('k8s-example')">Copy</button>
                     </div>
                     
                     <p><strong>Environment Variables:</strong></p>
@@ -1182,44 +1336,39 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                     <p>📖 <strong>More Examples:</strong> <a href="https://github.com/slydlake/wordpress-prometheus-metrics#security-features" target="_blank">See GitHub Documentation</a></p>
                 </div>
 
-                <div class="card">
+                <div class="slymetrics-card">
                     <h2>Usage Examples</h2>
                     
                     <h3>Primary Endpoint (Clean URL)</h3>
                     <h4>cURL with Bearer Token</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <code id="curl-primary">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/slymetrics/metrics' ) ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-primary')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('curl-primary')">Copy</button>
                     </div>
                     
                     <h4>cURL with API Key</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <code id="curl-apikey-primary">curl "<?php echo esc_url( home_url( '/slymetrics/metrics' ) ); ?>?api_key=<?php echo esc_attr( $auth_settings['api_key'] ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-apikey-primary')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('curl-apikey-primary')">Copy</button>
                     </div>
                     
                     <h3>Fallback Endpoints</h3>
                     <h4>REST API Endpoint</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <code id="curl-rest">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( $endpoint_url ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-rest')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('curl-rest')">Copy</button>
                     </div>
                     
                     <h4>Universal Fallback (Always Works)</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <code id="curl-fallback">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/?slymetrics=1' ) ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-fallback')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('curl-fallback')">Copy</button>
                     </div>
                     
-                    <h4>Alternative Clean URL</h4>
-                    <div class="code-block">
-                        <code id="curl-simple">curl -H "Authorization: Bearer <?php echo esc_attr( $auth_settings['bearer_token'] ); ?>" "<?php echo esc_url( home_url( '/metrics' ) ); ?>"</code>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('curl-simple')">Copy</button>
-                    </div>
                     
                     <h3>Prometheus Configuration</h3>
                     <h4>Primary Configuration</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <pre id="prometheus-config"># prometheus.yml
 scrape_configs:
   - job_name: 'wordpress'
@@ -1229,11 +1378,11 @@ scrape_configs:
     authorization:
       type: Bearer
       credentials: '<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>'</pre>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('prometheus-config')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('prometheus-config')">Copy</button>
                     </div>
                     
                     <h4>REST API Fallback Configuration</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <pre id="prometheus-fallback"># prometheus.yml (REST API fallback)
 scrape_configs:
   - job_name: 'wordpress'
@@ -1243,11 +1392,11 @@ scrape_configs:
     authorization:
       type: Bearer
       credentials: '<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>'</pre>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('prometheus-fallback')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('prometheus-fallback')">Copy</button>
                     </div>
                     
                     <h4>Universal Fallback Configuration (Always Works)</h4>
-                    <div class="code-block">
+                    <div class="slymetrics-code-block">
                         <pre id="prometheus-alt"># prometheus.yml (universal fallback)
 scrape_configs:
   - job_name: 'wordpress'
@@ -1259,220 +1408,12 @@ scrape_configs:
     authorization:
       type: Bearer
       credentials: '<?php echo esc_attr( $auth_settings['bearer_token'] ); ?>'</pre>
-                        <button type="button" class="button copy-btn" onclick="copyToClipboard('prometheus-alt')">Copy</button>
+                        <button type="button" class="button slymetrics-copy-btn" onclick="copyToClipboard('prometheus-alt')">Copy</button>
                     </div>
                 </div>
             </div>
-
-            <script>
-                function copyToClipboard(elementId) {
-                    const element = document.getElementById(elementId);
-                    let text = '';
-                    
-                    // Handle different element types
-                    if (element.tagName === 'PRE') {
-                        text = element.textContent || element.innerText;
-                    } else if (element.tagName === 'CODE') {
-                        text = element.textContent || element.innerText;
-                    } else if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-                        text = element.value;
-                    } else {
-                        text = element.textContent || element.innerText || element.value;
-                    }
-                    
-                    // Clean up the text
-                    text = text.trim();
-                    
-                    // Try modern clipboard API first
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(text).then(function() {
-                            showCopyFeedback(element);
-                        }).catch(function(err) {
-                            fallbackCopy(text, element);
-                        });
-                    } else {
-                        // Fallback for older browsers
-                        fallbackCopy(text, element);
-                    }
-                }
-                
-                function fallbackCopy(text, element) {
-                    // Create a temporary textarea for copying
-                    const textarea = document.createElement('textarea');
-                    textarea.value = text;
-                    textarea.style.position = 'fixed';
-                    textarea.style.opacity = '0';
-                    document.body.appendChild(textarea);
-                    textarea.focus();
-                    textarea.select();
-                    
-                    try {
-                        document.execCommand('copy');
-                        showCopyFeedback(element);
-                    } catch (err) {
-                        console.error('Copy failed:', err);
-                    }
-                    
-                    document.body.removeChild(textarea);
-                }
-                
-                function showCopyFeedback(element) {
-                    // Find the copy button in the same container
-                    const button = element.parentNode.querySelector('.copy-btn') || 
-                                  element.parentElement.querySelector('.copy-btn') ||
-                                  element.nextElementSibling;
-                    
-                    if (button) {
-                        const originalText = button.textContent;
-                        button.textContent = 'Copied!';
-                        button.style.backgroundColor = '#00a32a';
-                        button.style.color = 'white';
-                        
-                        setTimeout(function() {
-                            button.textContent = originalText;
-                            button.style.backgroundColor = '';
-                            button.style.color = '';
-                        }, 2000);
-                    }
-                }
-            </script>
-
-            <style>
-                .wrap {
-                    max-width: none !important;
-                    margin-right: 20px;
-                }
-                .card { 
-                    background: #fff; 
-                    border: 1px solid #ccd0d4; 
-                    padding: 20px; 
-                    margin: 20px 0; 
-                    width: calc(100% - 40px) !important;
-                    max-width: none !important;
-                    box-sizing: border-box;
-                }
-                .card h2 { 
-                    margin-top: 0; 
-                    padding-bottom: 10px;
-                    border-bottom: 1px solid #eee;
-                }
-                .card h3 { 
-                    color: #23282d; 
-                    margin-top: 20px; 
-                    margin-bottom: 10px;
-                }
-                .card h4 { 
-                    color: #23282d; 
-                    margin-top: 15px; 
-                    margin-bottom: 8px;
-                    font-size: 14px;
-                }
-                .card code { 
-                    background: #f1f1f1; 
-                    padding: 8px 12px; 
-                    border-radius: 4px; 
-                    display: inline-block; 
-                    margin: 8px 0; 
-                    word-break: break-all;
-                    font-size: 13px;
-                    max-width: 100%;
-                }
-                .card pre { 
-                    background: #f1f1f1; 
-                    padding: 15px; 
-                    border-radius: 4px; 
-                    overflow-x: auto; 
-                    margin: 10px 0;
-                    width: 100%;
-                    box-sizing: border-box;
-                }
-                .card pre code {
-                    background: none;
-                    padding: 0;
-                    margin: 0;
-                    display: block;
-                    width: 100%;
-                }
-                .card input[readonly] { 
-                    background: #f9f9f9; 
-                    width: 100%;
-                    max-width: 600px;
-                    box-sizing: border-box;
-                }
-                .card input[readonly]:focus { 
-                    background: #fff; 
-                }
-                .card .form-table {
-                    width: 100%;
-                    max-width: none;
-                }
-                .card .form-table th {
-                    width: 150px;
-                    padding: 15px 10px 15px 0;
-                }
-                .card .form-table td {
-                    padding: 15px 0;
-                    width: auto;
-                }
-                .card ul {
-                    margin: 15px 0;
-                    padding-left: 25px;
-                }
-                .card ul li {
-                    margin-bottom: 8px;
-                    line-height: 1.5;
-                }
-                .card .regular-text {
-                    width: 100% !important;
-                    max-width: 600px;
-                }
-                .notice.inline {
-                    margin: 15px 0;
-                    padding: 12px;
-                }
-                .notice.inline p {
-                    margin: 0;
-                }
-                .token-field {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    flex-wrap: wrap;
-                }
-                .token-field input {
-                    flex: 1;
-                    min-width: 300px;
-                }
-                .copy-btn {
-                    margin-left: 10px !important;
-                    white-space: nowrap;
-                    transition: all 0.3s ease;
-                }
-                .copy-btn:hover {
-                    background-color: #0073aa !important;
-                    color: white !important;
-                }
-                .code-block {
-                    position: relative;
-                    margin: 10px 0;
-                    width: 100%;
-                    overflow: visible;
-                }
-                .code-block .copy-btn {
-                    position: absolute;
-                    top: 10px;
-                    right: 10px;
-                    z-index: 10;
-                }
-                .code-block code,
-                .code-block pre {
-                    padding-right: 80px;
-                }
-            </style>
             <?php
-        }
-
-        /**
+        }        /**
          * Activation hook: flush rewrite rules so REST routes are available.
          */
         public static function on_activate() {
@@ -1763,8 +1704,8 @@ scrape_configs:
                     $sizes['themes'] = round( $themes_size / (1024 * 1024), 2 );
                 }
                 
-                // Plugins directory
-                $plugins_dir = WP_PLUGIN_DIR;
+                // Plugins directory using WordPress API
+                $plugins_dir = defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : SLYMET_PLUGIN_DIR . '../..';
                 if ( is_dir( $plugins_dir ) ) {
                     $plugins_size = self::get_directory_size_safe( $plugins_dir );
                     $sizes['plugins'] = round( $plugins_size / (1024 * 1024), 2 );
@@ -1840,6 +1781,7 @@ scrape_configs:
         
         /**
          * Get WordPress health tests using the actual WordPress Site Health system.
+         * This function properly loads and immediately uses the WP Site Health class.
          *
          * @return array Health test results
          */
@@ -1849,11 +1791,13 @@ scrape_configs:
                 if ( ! class_exists( 'WP_Site_Health' ) ) {
                     if ( file_exists( ABSPATH . 'wp-admin/includes/class-wp-site-health.php' ) ) {
                         require_once ABSPATH . 'wp-admin/includes/class-wp-site-health.php';
+                        // Immediate usage after require_once as per WordPress guidelines
                     } else {
                         return array();
                     }
                 }
                 
+                // Ensure class is available after loading
                 if ( ! class_exists( 'WP_Site_Health' ) ) {
                     return array();
                 }
@@ -2156,6 +2100,10 @@ scrape_configs:
         }
     }
 
-    // Initialize the plugin
-    SlyMetrics_Plugin::init();
+    // Initialize the plugin with security checks
+    if ( is_admin() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || 
+         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public metrics endpoint with custom authentication
+         ( isset( $_GET['slymetrics'] ) || strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), '/slymetrics' ) !== false ) ) {
+        SlyMetrics_Plugin::init();
+    }
 }
