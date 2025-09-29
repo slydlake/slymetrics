@@ -3,7 +3,7 @@
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
  * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
- * Version: 1.3.0
+ * Version: 1.3.2
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Author: Timon Först
@@ -33,7 +33,7 @@ if ( ! defined( 'SLYMET_PLUGIN_URL' ) ) {
     define( 'SLYMET_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
 if ( ! defined( 'SLYMET_VERSION' ) ) {
-    define( 'SLYMET_VERSION', '1.2.0' );
+    define( 'SLYMET_VERSION', '1.3.3' );
 }
 
 if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
@@ -1421,7 +1421,9 @@ scrape_configs:
             self::add_rewrite_rules();
             // Then flush to make them active
             flush_rewrite_rules();
-            // Generate default auth tokens if they don't exist
+            // Fix encryption key if needed (migrate from old format) - BEFORE token creation
+            self::fix_encryption_key_if_needed();
+            // Generate default auth tokens if they don't exist - AFTER key is fixed
             self::ensure_auth_tokens();
             // Mark that we've flushed rules
             update_option( 'slymetrics_rewrite_rules_flushed', time() );
@@ -1441,6 +1443,9 @@ scrape_configs:
          * Ensure authentication tokens exist.
          */
         private static function ensure_auth_tokens() {
+            // Ensure encryption key exists first (triggers creation if needed)
+            self::get_encryption_key();
+            
             if ( ! self::get_decrypted_option( 'slymetrics_auth_token' ) ) {
                 self::set_encrypted_option( 'slymetrics_auth_token', self::generate_secure_token() );
             }
@@ -1459,22 +1464,68 @@ scrape_configs:
         }
 
         /**
+         * Fix encryption key if it was stored in wrong format (migration).
+         * Also ensures encryption key exists.
+         */
+        private static function fix_encryption_key_if_needed() {
+            // Skip if environment key is used
+            if ( self::is_encryption_key_from_env() ) {
+                return;
+            }
+
+            $key = get_option( 'slymetrics_encryption_key' );
+            if ( $key ) {
+                // Check if the key is in the old hex format (64 characters hex string)
+                if ( strlen( $key ) === 64 && ctype_xdigit( $key ) ) {
+                    // This is likely an old hex-format key, convert to proper base64 format
+                    $raw_key = random_bytes( 32 ); // Generate new proper key
+                    $base64_key = base64_encode( $raw_key );
+                    update_option( 'slymetrics_encryption_key', $base64_key );
+                    
+                    // Regenerate tokens since the old ones can't be decrypted properly
+                    // Only delete if they actually exist
+                    if ( get_option( 'slymetrics_auth_token' ) ) {
+                        delete_option( 'slymetrics_auth_token' );
+                    }
+                    if ( get_option( 'slymetrics_api_key' ) ) {
+                        delete_option( 'slymetrics_api_key' );
+                    }
+                }
+                // Key exists and is in correct format, do nothing
+            } else {
+                // No key exists, create one
+                $raw_key = random_bytes( 32 ); // 32 bytes = 256 bits
+                $base64_key = base64_encode( $raw_key );
+                $success = update_option( 'slymetrics_encryption_key', $base64_key );
+                
+                // Debug: Log if key creation failed
+                if ( ! $success && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    error_log( 'SlyMetrics: Failed to create encryption key in database' );
+                }
+            }
+        }
+
+        /**
          * Get encryption key for token storage.
          *
          * @return string
          */
         private static function get_encryption_key() {
-            // First check environment variable
+            // First check environment variable (expects base64 encoded key)
             $env_key = getenv( 'SLYMETRICS_ENCRYPTION_KEY' );
             if ( $env_key !== false && ! empty( $env_key ) ) {
                 return base64_decode( $env_key );
             }
             
-            // Fallback to database storage
+            // Fallback to database storage (stored as base64 encoded)
             $key = get_option( 'slymetrics_encryption_key' );
             if ( ! $key ) {
-                $key = self::generate_secure_token();
-                update_option( 'slymetrics_encryption_key', $key );
+                // This should not happen if fix_encryption_key_if_needed() was called first
+                // But as a safety fallback, create the key
+                $raw_key = random_bytes( 32 ); // 32 bytes = 256 bits
+                $base64_key = base64_encode( $raw_key );
+                update_option( 'slymetrics_encryption_key', $base64_key );
+                return $raw_key;
             }
             return base64_decode( $key );
         }

@@ -3,7 +3,7 @@ Contributors: timonf
 Tags: prometheus, metrics, monitoring, observability, performance
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.0
+Stable tag: 1.3.2
 Requires PHP: 7.4
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -145,6 +145,20 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 
 == Changelog ==
 
+= 1.3.2 =
+* **🐛 Encryption Key Bugfix**: Fixed encryption key creation during plugin installation
+* **🔧 Key Format Correction**: Proper base64 encoding for database-stored encryption keys (was incorrectly using hex format)
+* **🔄 Migration Support**: Automatic detection and migration of old hex-format encryption keys
+* **🛠️ Token Regeneration**: Auth tokens are regenerated when encryption key format is fixed
+* **🗑️ Uninstall Cleanup**: Added comprehensive plugin data removal during uninstallation (GitHub Issue #1)
+* **📊 Diagnostics Tool**: Added diagnostics.php for encryption key troubleshooting
+* **⚡ Environment Variables**: Improved environment variable handling for SLYMETRICS_ENCRYPTION_KEY
+
+= 1.3.1 =
+* **🗑️ Plugin Uninstall**: Complete database cleanup when plugin is uninstalled
+* **🧹 Data Removal**: Removes all options, transients, and cached data
+* **🔄 Rewrite Rules**: Flushes custom endpoints during uninstall
+
 = 1.3.0 =
 * **🔧 WordPress.org Compliance**: Complete compliance with WordPress.org Plugin Directory requirements
 * **📦 wp_enqueue Implementation**: Migrated from inline scripts/styles to proper wp_enqueue_script/style with wp_add_inline_*
@@ -207,6 +221,12 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 * Multiple endpoint options for compatibility
 
 == Upgrade Notice ==
+
+= 1.3.2 =
+Critical bugfix: Fixes encryption key creation during installation. Existing installations will be automatically migrated. Plugin now properly removes all data during uninstall.
+
+= 1.3.1 =
+Adds proper plugin uninstall functionality with complete database cleanup. No action required for existing installations.
 
 = 1.3.0 =
 WordPress.org compliance update: Proper wp_enqueue implementation, unique CSS classes, and security improvements. Fully backward compatible with enhanced admin interface.
