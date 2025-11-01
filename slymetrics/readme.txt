@@ -3,7 +3,7 @@ Contributors: timonf
 Tags: prometheus, metrics, monitoring, observability, performance
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 Requires PHP: 7.4
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -145,6 +145,11 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 
 == Changelog ==
 
+= 1.3.3 =
+* **🔧 Prometheus ServiceMonitor Fix**: Fixed Host header handling for Kubernetes ServiceMonitor compatibility
+* **🎯 Localhost Support**: Metrics endpoint now works correctly when accessed via localhost or Pod IP addresses
+* **📊 Monitoring Improvement**: Eliminates false-positive "TargetDown" alerts in Prometheus when scraping from within cluster
+
 = 1.3.2 =
 * **🐛 Encryption Key Bugfix**: Fixed encryption key creation during plugin installation
 * **🔧 Key Format Correction**: Proper base64 encoding for database-stored encryption keys (was incorrectly using hex format)
@@ -221,6 +226,9 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 * Multiple endpoint options for compatibility
 
 == Upgrade Notice ==
+
+= 1.3.3 =
+Important fix for Kubernetes/Prometheus users: Resolves Host header issues that caused metrics endpoints to return 404 when accessed from ServiceMonitors. Highly recommended for containerized deployments.
 
 = 1.3.2 =
 Critical bugfix: Fixes encryption key creation during installation. Existing installations will be automatically migrated. Plugin now properly removes all data during uninstall.

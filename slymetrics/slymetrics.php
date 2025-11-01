@@ -3,7 +3,7 @@
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
  * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
- * Version: 1.3.2
+ * Version: 1.3.3
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Author: Timon Först
@@ -220,6 +220,13 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
          * Centralized response logic for all endpoint patterns.
          */
         private static function serve_metrics_response() {
+            // Fix Host header for Prometheus ServiceMonitor compatibility
+            // This ensures metrics work even when accessed via localhost or Pod IP
+            $site_host = wp_parse_url( home_url(), PHP_URL_HOST );
+            if ( $site_host && isset( $_SERVER['HTTP_HOST'] ) && $_SERVER['HTTP_HOST'] !== $site_host ) {
+                $_SERVER['HTTP_HOST'] = $site_host;
+            }
+            
             // Simple rate limiting check
             $client_ip = self::get_client_ip();
             $rate_limit_key = 'slymetrics_rate_limit_' . md5( $client_ip );
