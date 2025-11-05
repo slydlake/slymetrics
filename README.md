@@ -4,8 +4,6 @@ A comprehensive WordPress plugin that exports WordPress metrics in Prometheus fo
 
 Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpress.org/plugins/slymetrics/)
 
-**Latest Version:** 1.3.0 - WordPress.org Compliance Update
-
 ![Grafana Dashboard](./assets//screenshot-4.png)
 
 ## 🚀 Features
@@ -22,6 +20,30 @@ Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpr
 - **🛡️ Production Ready**: Enterprise-grade architecture with comprehensive error handling
 - **💾 Memory Optimized**: Lazy loading and optimized data structures for heavy operations
 - **🌐 Professional Code**: Multi-language support with enterprise-grade documentation
+
+
+### New in Version 1.3.4 
+- **🎨 New Plugin Icon**: Added custom plugin icon
+
+### New in Version 1.3.3
+- **🔧 Prometheus ServiceMonitor Fix**: Fixed Host header handling for Kubernetes ServiceMonitor compatibility
+- **🎯 Localhost Support**: Metrics endpoint now works correctly when accessed via localhost or Pod IP addresses
+- **📊 Monitoring Improvement**: Eliminates false-positive "TargetDown" alerts in Prometheus when scraping from within cluster
+
+### New in Version 1.3.2 
+- **🐛 Encryption Key Bugfix**: Fixed encryption key creation during plugin installation
+- **🔧 Key Format Correction**: Proper base64 encoding for database-stored encryption keys (was incorrectly using hex format)
+- **🔄 Migration Support**: Automatic detection and migration of old hex-format encryption keys
+- **🛠️ Token Regeneration**: Auth tokens are regenerated when encryption key format is fixed
+- **🗑️ Uninstall Cleanup**: Added comprehensive plugin data removal during uninstallation (GitHub Issue #1)
+- **📊 Diagnostics Tool**: Added diagnostics.php for encryption key troubleshooting
+- **⚡ Environment Variables**: Improved environment variable handling for SLYMETRICS_ENCRYPTION_KEY
+
+### New in Version 1.3.1 
+- **🗑️ Plugin Uninstall**: Complete database cleanup when plugin is uninstalled
+- **🧹 Data Removal**: Removes all options, transients, and cached data
+- **🔄 Rewrite Rules**: Flushes custom endpoints during uninstall
+
 
 ### New in Version 1.3.0
 
