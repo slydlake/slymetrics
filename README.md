@@ -196,6 +196,7 @@ export SLYMETRICS_BEARER_TOKEN=$(openssl rand -hex 32)
 # prometheus.yml
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https # use here http or https
     static_configs:
       - targets: ['yoursite.com']
     metrics_path: '/slymetrics/metrics'
@@ -210,6 +211,7 @@ scrape_configs:
 # prometheus.yml (REST API fallback)
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https # use here http or https
     static_configs:
       - targets: ['yoursite.com']
     metrics_path: '/index.php'
@@ -226,6 +228,7 @@ scrape_configs:
 # prometheus.yml (query parameter fallback)
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https # use here http or https
     static_configs:
       - targets: ['yoursite.com']
     metrics_path: '/'
