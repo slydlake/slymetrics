@@ -2232,10 +2232,6 @@ scrape_configs:
         }
     }
 
-    // Initialize the plugin with security checks
-    if ( is_admin() || wp_doing_cron() || ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || 
-         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public metrics endpoint with custom authentication
-         ( isset( $_GET['slymetrics'] ) || strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ?? '' ) ), '/slymetrics' ) !== false ) ) {
-        SlyMetrics_Plugin::init();
-    }
+    // Initialize the plugin - always load to ensure metrics endpoint works
+    SlyMetrics_Plugin::init();
 }
