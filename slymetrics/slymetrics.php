@@ -1757,6 +1757,27 @@ scrape_configs:
                     
                     // Schedule flush for later in the init process
                     add_action( 'init', 'flush_rewrite_rules', 999 );
+                } else {
+                    // Plugin was initialized before, but check if rewrite rules exist
+                    // This handles container restarts where rewrite rules might be missing
+                    $rewrite_rules = get_option( 'rewrite_rules' );
+                    $rules_exist = false;
+                    
+                    if ( is_array( $rewrite_rules ) ) {
+                        // Check if our custom rewrite rule exists
+                        foreach ( $rewrite_rules as $pattern => $rewrite ) {
+                            if ( strpos( $pattern, 'slymetrics' ) !== false ) {
+                                $rules_exist = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If our rules don't exist, re-register and flush
+                    if ( ! $rules_exist ) {
+                        self::add_rewrite_rules();
+                        add_action( 'init', 'flush_rewrite_rules', 999 );
+                    }
                 }
                 
                 // Set transient to skip this check for 1 hour (reduces DB queries)
