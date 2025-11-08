@@ -3,7 +3,7 @@
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
  * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
- * Version: 1.3.5
+ * Version: 1.3.6
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Author: Timon Först
@@ -31,9 +31,6 @@ if ( ! defined( 'SLYMET_PLUGIN_DIR' ) ) {
 }
 if ( ! defined( 'SLYMET_PLUGIN_URL' ) ) {
     define( 'SLYMET_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-}
-if ( ! defined( 'SLYMET_VERSION' ) ) {
-    define( 'SLYMET_VERSION', '1.3.3' );
 }
 
 if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
@@ -76,6 +73,9 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             
             // Single unified metrics handler (early interception for all URL patterns)
             add_action( 'parse_request', array( __CLASS__, 'handle_metrics_request' ) );
+            
+            // Ensure plugin is initialized on every init (handles new installations without admin access)
+            add_action( 'init', array( __CLASS__, 'ensure_plugin_initialized' ), 1 );
             
             // Check and refresh rewrite rules if needed (admin only)
             add_action( 'admin_init', array( __CLASS__, 'maybe_flush_rewrite_rules' ) );
@@ -1427,15 +1427,14 @@ scrape_configs:
          * Activation hook: flush rewrite rules so REST routes are available.
          */
         public static function on_activate() {
-            // Add our rewrite rules first
-            self::add_rewrite_rules();
-            // Then flush to make them active
-            flush_rewrite_rules();
-            // Fix encryption key if needed (migrate from old format) - BEFORE token creation
+            // Use the same initialization logic
             self::fix_encryption_key_if_needed();
-            // Generate default auth tokens if they don't exist - AFTER key is fixed
             self::ensure_auth_tokens();
-            // Mark that we've flushed rules
+            self::add_rewrite_rules();
+            flush_rewrite_rules();
+            
+            // Mark as initialized
+            update_option( 'slymetrics_initialized', true );
             update_option( 'slymetrics_rewrite_rules_flushed', time() );
         }
 
@@ -1445,6 +1444,13 @@ scrape_configs:
         public static function on_deactivate() {
             // Clean up transients
             delete_transient( self::CACHE_KEY );
+            delete_transient( self::CACHE_KEY . '_fast' );
+            delete_transient( self::CACHE_KEY_HEAVY );
+            delete_transient( self::CACHE_KEY_STATIC );
+            
+            // Remove initialization flag
+            delete_option( 'slymetrics_initialized' );
+            
             // Flush rewrite rules to remove our custom rules
             flush_rewrite_rules();
         }
@@ -1716,6 +1722,40 @@ scrape_configs:
                 
                 // Also update a flag to indicate we've flushed rules
                 update_option( 'slymetrics_rewrite_rules_flushed', time() );
+            }
+        }
+
+        /**
+         * Ensure plugin is properly initialized even without admin access.
+         * This handles scenarios where WordPress is deployed with plugins pre-installed
+         * but wp-admin is never accessed (headless/API-only setups).
+         */
+        public static function ensure_plugin_initialized() {
+            // Use transient to avoid database query on every request
+            $check_needed = get_transient( 'slymetrics_init_check' );
+            
+            if ( false === $check_needed ) {
+                // Check if plugin has been initialized before
+                $initialized = get_option( 'slymetrics_initialized', false );
+                
+                if ( ! $initialized ) {
+                    // Fix encryption key if needed (migrate from old format) - BEFORE token creation
+                    self::fix_encryption_key_if_needed();
+                    
+                    // Generate default auth tokens if they don't exist - AFTER key is fixed
+                    self::ensure_auth_tokens();
+                    
+                    // Add rewrite rules and flush them
+                    self::add_rewrite_rules();
+                    flush_rewrite_rules();
+                    
+                    // Mark as initialized
+                    update_option( 'slymetrics_initialized', true );
+                    update_option( 'slymetrics_rewrite_rules_flushed', time() );
+                }
+                
+                // Set transient to skip this check for 1 hour (reduces DB queries)
+                set_transient( 'slymetrics_init_check', true, HOUR_IN_SECONDS );
             }
         }
 
