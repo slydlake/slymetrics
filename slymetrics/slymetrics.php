@@ -178,9 +178,28 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
          * This runs before WordPress routing, ensuring ?slymetrics=1 works immediately.
          */
         public static function early_metrics_check() {
+            // Check for query parameter pattern
             // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public metrics endpoint with custom authentication
             if ( isset( $_GET['slymetrics'] ) || isset( $_GET['slybase_metrics'] ) ) {
                 self::serve_metrics_response();
+                return;
+            }
+            
+            // Also check for direct path access
+            $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+            $parsed_url = wp_parse_url( $request_uri );
+            $path = isset( $parsed_url['path'] ) ? trim( $parsed_url['path'], '/' ) : '';
+            
+            // Check for path-based patterns
+            $metrics_paths = array(
+                'slymetrics/metrics',
+                'slymetrics',
+                'metrics'
+            );
+            
+            if ( in_array( $path, $metrics_paths, true ) ) {
+                self::serve_metrics_response();
+                return;
             }
         }
 
