@@ -3,7 +3,7 @@ Contributors: timonf
 Tags: prometheus, metrics, monitoring, observability, performance
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.5
+Stable tag: 1.3.6
 Requires PHP: 7.4
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -145,6 +145,14 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 
 == Changelog ==
 
+= 1.3.6 =
+* **🚀 Headless WordPress Support**: Plugin auto-initializes on first request without requiring admin panel access
+* **🐳 Container-Friendly**: Perfect for Docker/Kubernetes deployments where wp-admin is never accessed
+* **⚡ Smart Initialization**: Automatic encryption key generation and token creation on first metrics request
+* **🔧 Performance Optimization**: Transient-based initialization check to avoid unnecessary database queries
+* **🛠️ Multi-Replica Ready**: Ensures consistent plugin behavior across all WordPress pods in scaled deployments
+* **📦 CI/CD Compatible**: Works seamlessly with fully automated WordPress deployments
+
 = 1.3.5 =
 * **📊 Prometheus Configuration**: Added scheme parameter to Prometheus sample scraper configuration
 
@@ -232,6 +240,9 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 * Multiple endpoint options for compatibility
 
 == Upgrade Notice ==
+
+= 1.3.6 =
+Headless WordPress support: Plugin now auto-initializes on first request without requiring admin access. Perfect for containerized, API-only, and Kubernetes deployments where wp-admin is never accessed.
 
 = 1.3.3 =
 Important fix for Kubernetes/Prometheus users: Resolves Host header issues that caused metrics endpoints to return 404 when accessed from ServiceMonitors. Highly recommended for containerized deployments.
