@@ -1274,7 +1274,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
+                "uid": "${datasource}"
             },
             "description": "WordPress and PHP configuration per site",
             "fieldConfig": {
@@ -1362,6 +1362,7 @@
             "targets": [
                 {
                     "datasource": {
+                        "type": "prometheus",
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
@@ -1375,7 +1376,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": "${datasource}"
                     },
                     "editorMode": "code",
                     "expr": "wordpress_php_version_info{wordpress_site=~\"$website\"}",
@@ -1387,6 +1388,7 @@
                 },
                 {
                     "datasource": {
+                        "type": "prometheus",
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
@@ -1400,7 +1402,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": "${datasource}"
                     },
                     "editorMode": "code",
                     "expr": "wordpress_upload_max_info{wordpress_site=~\"$website\"}",
@@ -1412,6 +1414,7 @@
                 },
                 {
                     "datasource": {
+                        "type": "prometheus",
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
@@ -1425,7 +1428,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": "${datasource}"
                     },
                     "editorMode": "code",
                     "expr": "wordpress_exec_time_info{wordpress_site=~\"$website\"}",
@@ -1577,7 +1580,7 @@
         {
             "datasource": {
                 "type": "prometheus",
-                "uid": "${DS_PROMETHEUS}"
+                "uid": "${datasource}"
             },
             "description": "Plugin update status - plugins needing updates shown in red",
             "fieldConfig": {
@@ -1661,6 +1664,7 @@
             "targets": [
                 {
                     "datasource": {
+                        "type": "prometheus",
                         "uid": "${datasource}"
                     },
                     "editorMode": "code",
@@ -1673,7 +1677,7 @@
                 {
                     "datasource": {
                         "type": "prometheus",
-                        "uid": "${DS_PROMETHEUS}"
+                        "uid": "${datasource}"
                     },
                     "editorMode": "code",
                     "expr": "sum(wordpress_plugins_update_total{wordpress_site=~\"$website\", status=\"available\"})",
