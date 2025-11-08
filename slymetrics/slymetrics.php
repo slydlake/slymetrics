@@ -1740,6 +1740,7 @@ scrape_configs:
             if ( false === $check_needed ) {
                 // Check if plugin has been initialized before
                 $initialized = get_option( 'slymetrics_initialized', false );
+                $needs_flush = false;
                 
                 if ( ! $initialized ) {
                     // Fix encryption key if needed (migrate from old format) - BEFORE token creation
@@ -1748,15 +1749,14 @@ scrape_configs:
                     // Generate default auth tokens if they don't exist - AFTER key is fixed
                     self::ensure_auth_tokens();
                     
-                    // Add rewrite rules but don't flush yet (flush happens later in init)
+                    // Add rewrite rules
                     self::add_rewrite_rules();
                     
                     // Mark as initialized
                     update_option( 'slymetrics_initialized', true );
                     update_option( 'slymetrics_rewrite_rules_flushed', time() );
                     
-                    // Schedule flush for later in the init process
-                    add_action( 'init', 'flush_rewrite_rules', 999 );
+                    $needs_flush = true;
                 } else {
                     // Plugin was initialized before, but check if rewrite rules exist
                     // This handles container restarts where rewrite rules might be missing
@@ -1776,8 +1776,13 @@ scrape_configs:
                     // If our rules don't exist, re-register and flush
                     if ( ! $rules_exist ) {
                         self::add_rewrite_rules();
-                        add_action( 'init', 'flush_rewrite_rules', 999 );
+                        $needs_flush = true;
                     }
+                }
+                
+                // Flush rewrite rules if needed - do this AFTER init hook completes
+                if ( $needs_flush ) {
+                    add_action( 'shutdown', 'flush_rewrite_rules', 1 );
                 }
                 
                 // Set transient to skip this check for 1 hour (reduces DB queries)
