@@ -21,6 +21,8 @@ Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpr
 - **💾 Memory Optimized**: Lazy loading and optimized data structures for heavy operations
 - **🌐 Professional Code**: Multi-language support with enterprise-grade documentation
 
+### New in Version 1.3.5
+- **📊 Prometheus Configuration**: Added scheme parameter to Prometheus sample scraper configuration
 
 ### New in Version 1.3.4 
 - **🎨 New Plugin Icon**: Added custom plugin icon

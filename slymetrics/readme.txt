@@ -3,7 +3,7 @@ Contributors: timonf
 Tags: prometheus, metrics, monitoring, observability, performance
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 1.3.4
+Stable tag: 1.3.5
 Requires PHP: 7.4
 License: MIT
 License URI: https://opensource.org/licenses/MIT
@@ -144,6 +144,9 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 6. Grafana dashboard selectable Websites
 
 == Changelog ==
+
+= 1.3.5 =
+* **📊 Prometheus Configuration**: Added scheme parameter to Prometheus sample scraper configuration
 
 = 1.3.4 =
 * **🎨 New Plugin Icon**: Added custom plugin icon

@@ -3,7 +3,7 @@
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
  * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
- * Version: 1.3.4
+ * Version: 1.3.5
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Author: Timon Först
@@ -1379,6 +1379,7 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                         <pre id="prometheus-config"># prometheus.yml
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https
     static_configs:
       - targets: ['<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>']
     metrics_path: '/slymetrics/metrics'
@@ -1393,6 +1394,7 @@ scrape_configs:
                         <pre id="prometheus-fallback"># prometheus.yml (REST API fallback)
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https
     static_configs:
       - targets: ['<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>']
     metrics_path: '/wp-json/slymetrics/v1/metrics'
@@ -1407,6 +1409,7 @@ scrape_configs:
                         <pre id="prometheus-alt"># prometheus.yml (universal fallback)
 scrape_configs:
   - job_name: 'wordpress'
+    scheme: https
     static_configs:
       - targets: ['<?php echo esc_html( wp_parse_url( home_url(), PHP_URL_HOST ) ); ?>']
     metrics_path: '/'
