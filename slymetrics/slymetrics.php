@@ -836,6 +836,9 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                 self::log_error( 'Label value truncated due to excessive length', array( 'original_length' => strlen( $value ) ) );
             }
             
+            // Decode HTML entities first (e.g., &#039; to ', &quot; to ")
+            $value = html_entity_decode( $value, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+            
             // Escape special characters for Prometheus format
             $value = str_replace( array( '\\', '"', "\n", "\r", "\t" ), array( '\\\\', '\\"', '\\n', '\\r', '\\t' ), $value );
             
@@ -1745,13 +1748,15 @@ scrape_configs:
                     // Generate default auth tokens if they don't exist - AFTER key is fixed
                     self::ensure_auth_tokens();
                     
-                    // Add rewrite rules and flush them
+                    // Add rewrite rules but don't flush yet (flush happens later in init)
                     self::add_rewrite_rules();
-                    flush_rewrite_rules();
                     
                     // Mark as initialized
                     update_option( 'slymetrics_initialized', true );
                     update_option( 'slymetrics_rewrite_rules_flushed', time() );
+                    
+                    // Schedule flush for later in the init process
+                    add_action( 'init', 'flush_rewrite_rules', 999 );
                 }
                 
                 // Set transient to skip this check for 1 hour (reduces DB queries)

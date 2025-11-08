@@ -21,6 +21,15 @@ Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpr
 - **💾 Memory Optimized**: Lazy loading and optimized data structures for heavy operations
 - **🌐 Professional Code**: Multi-language support with enterprise-grade documentation
 
+### New in Version 1.3.6
+- **🚀 Headless WordPress Support**: Plugin now auto-initializes without requiring admin panel access
+- **🐳 Container-Friendly**: Perfect for Docker/Kubernetes deployments where wp-admin is never accessed
+- **⚡ Smart Initialization**: Automatic encryption key generation and token creation on first metrics request
+- **🔧 Performance Optimization**: Transient-based initialization check to avoid unnecessary database queries
+- **🛠️ Multi-Replica Ready**: Ensures consistent plugin behavior across all WordPress pods in scaled deployments
+- **📦 CI/CD Compatible**: Works seamlessly with fully automated WordPress deployments
+- **🏷️ HTML Entity Decoding**: Fixed Prometheus label values to properly decode HTML entities (e.g., &#039; → ')
+
 ### New in Version 1.3.5
 - **📊 Prometheus Configuration**: Added scheme parameter to Prometheus sample scraper configuration
 
