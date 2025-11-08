@@ -72,6 +72,8 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             add_filter( 'query_vars', array( __CLASS__, 'add_query_vars' ) );
             
             // Single unified metrics handler (early interception for all URL patterns)
+            // Use plugins_loaded to ensure we catch the request before WordPress processes it
+            add_action( 'plugins_loaded', array( __CLASS__, 'early_metrics_check' ), 1 );
             add_action( 'parse_request', array( __CLASS__, 'handle_metrics_request' ) );
             
             // Ensure plugin is initialized on every init (handles new installations without admin access)
@@ -169,6 +171,17 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
                 __( 'Authentication required for metrics endpoint.', 'slymetrics' ), 
                 array( 'status' => 401 ) 
             );
+        }
+
+        /**
+         * Early check for metrics request via query parameter.
+         * This runs before WordPress routing, ensuring ?slymetrics=1 works immediately.
+         */
+        public static function early_metrics_check() {
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public metrics endpoint with custom authentication
+            if ( isset( $_GET['slymetrics'] ) || isset( $_GET['slybase_metrics'] ) ) {
+                self::serve_metrics_response();
+            }
         }
 
         /**
@@ -1751,9 +1764,12 @@ scrape_configs:
                     // Add rewrite rules
                     self::add_rewrite_rules();
                     
-                    // Mark as initialized and set flag to flush rules
+                    // Flush immediately - this is safe because it only happens once
+                    flush_rewrite_rules();
+                    
+                    // Mark as initialized
                     update_option( 'slymetrics_initialized', true );
-                    update_option( 'slymetrics_needs_flush', true );
+                    update_option( 'slymetrics_rewrite_rules_flushed', time() );
                 } else {
                     // Plugin was initialized before, but check if rewrite rules exist
                     // This handles container restarts where rewrite rules might be missing
@@ -1770,18 +1786,12 @@ scrape_configs:
                         }
                     }
                     
-                    // If our rules don't exist, re-register and set flag to flush
+                    // If our rules don't exist, re-register and flush immediately
                     if ( ! $rules_exist ) {
                         self::add_rewrite_rules();
-                        update_option( 'slymetrics_needs_flush', true );
+                        flush_rewrite_rules();
+                        update_option( 'slymetrics_rewrite_rules_flushed', time() );
                     }
-                }
-                
-                // Check if we need to flush rules (from previous request)
-                if ( get_option( 'slymetrics_needs_flush', false ) ) {
-                    flush_rewrite_rules();
-                    delete_option( 'slymetrics_needs_flush' );
-                    update_option( 'slymetrics_rewrite_rules_flushed', time() );
                 }
                 
                 // Set transient to skip this check for 1 hour (reduces DB queries)
