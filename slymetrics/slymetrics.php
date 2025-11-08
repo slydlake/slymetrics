@@ -1740,7 +1740,6 @@ scrape_configs:
             if ( false === $check_needed ) {
                 // Check if plugin has been initialized before
                 $initialized = get_option( 'slymetrics_initialized', false );
-                $needs_flush = false;
                 
                 if ( ! $initialized ) {
                     // Fix encryption key if needed (migrate from old format) - BEFORE token creation
@@ -1752,11 +1751,9 @@ scrape_configs:
                     // Add rewrite rules
                     self::add_rewrite_rules();
                     
-                    // Mark as initialized
+                    // Mark as initialized and set flag to flush rules
                     update_option( 'slymetrics_initialized', true );
-                    update_option( 'slymetrics_rewrite_rules_flushed', time() );
-                    
-                    $needs_flush = true;
+                    update_option( 'slymetrics_needs_flush', true );
                 } else {
                     // Plugin was initialized before, but check if rewrite rules exist
                     // This handles container restarts where rewrite rules might be missing
@@ -1773,16 +1770,18 @@ scrape_configs:
                         }
                     }
                     
-                    // If our rules don't exist, re-register and flush
+                    // If our rules don't exist, re-register and set flag to flush
                     if ( ! $rules_exist ) {
                         self::add_rewrite_rules();
-                        $needs_flush = true;
+                        update_option( 'slymetrics_needs_flush', true );
                     }
                 }
                 
-                // Flush rewrite rules if needed - do this AFTER init hook completes
-                if ( $needs_flush ) {
-                    add_action( 'shutdown', 'flush_rewrite_rules', 1 );
+                // Check if we need to flush rules (from previous request)
+                if ( get_option( 'slymetrics_needs_flush', false ) ) {
+                    flush_rewrite_rules();
+                    delete_option( 'slymetrics_needs_flush' );
+                    update_option( 'slymetrics_rewrite_rules_flushed', time() );
                 }
                 
                 // Set transient to skip this check for 1 hour (reduces DB queries)
@@ -2232,6 +2231,7 @@ scrape_configs:
         }
     }
 
-    // Initialize the plugin - always load to ensure metrics endpoint works
+    // Initialize the plugin when needed
+    // Always init on admin, REST, or when metrics endpoint is requested
     SlyMetrics_Plugin::init();
 }
