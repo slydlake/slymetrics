@@ -243,7 +243,7 @@ Yes! All metrics include site labels, making it perfect for monitoring multi-sit
 == Upgrade Notice ==
 
 = 1.3.6 =
-Headless WordPress support: Plugin now auto-initializes on first request without requiring admin access. Perfect for containerized, API-only, and Kubernetes deployments where wp-admin is never accessed.
+Headless WordPress support: Plugin now auto-initializes on first request without requiring admin access. Perfect for containerized, and Kubernetes deployments where wp-admin is never accessed.
 
 = 1.3.3 =
 Important fix for Kubernetes/Prometheus users: Resolves Host header issues that caused metrics endpoints to return 404 when accessed from ServiceMonitors. Highly recommended for containerized deployments.
