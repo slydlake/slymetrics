@@ -1551,6 +1551,7 @@ scrape_configs:
                 
                 // Debug: Log if key creation failed
                 if ( ! $success && defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug logging when explicitly enabled via WP_DEBUG
                     error_log( 'SlyMetrics: Failed to create encryption key in database' );
                 }
             }
