@@ -3,7 +3,7 @@
  * Plugin Name: SlyMetrics
  * Plugin URI: https://github.com/slydlake/slymetrics
  * Description: Export comprehensive WordPress metrics in Prometheus format for monitoring and observability.
- * Version: 1.3.6
+ * Version: 1.3.7
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Author: Timon Först
@@ -874,8 +874,8 @@ if ( ! class_exists( 'SlyMetrics_Plugin' ) ) {
             // Escape special characters for Prometheus format
             $value = str_replace( array( '\\', '"', "\n", "\r", "\t" ), array( '\\\\', '\\"', '\\n', '\\r', '\\t' ), $value );
             
-            // Remove or replace potentially dangerous characters
-            $value = preg_replace( '/[^\x20-\x7E]/', '', $value ); // Remove non-printable ASCII
+            // Remove control characters but keep UTF-8 characters (allows umlauts, accents, etc.)
+            $value = preg_replace( '/[\x00-\x1F\x7F]/', '', $value ); // Remove only control characters
             
             return $value;
         }

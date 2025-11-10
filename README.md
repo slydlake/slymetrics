@@ -21,6 +21,9 @@ Wordpress Plugin page: [https://wordpress.org/plugins/slymetrics](https://wordpr
 - **💾 Memory Optimized**: Lazy loading and optimized data structures for heavy operations
 - **🌐 Professional Code**: Multi-language support with enterprise-grade documentation
 
+### New in Version 1.3.7
+- **🌍 UTF-8 Character Support**: Fixed label encoding to properly support umlauts and special characters (e.g., ö, ä, ü, é, etc.)
+
 ### New in Version 1.3.6
 - **🚀 Headless WordPress Support**: Plugin now auto-initializes without requiring admin panel access
 - **🐳 Container-Friendly**: Perfect for Docker/Kubernetes deployments where wp-admin is never accessed
